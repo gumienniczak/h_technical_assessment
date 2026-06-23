@@ -99,28 +99,21 @@ def select_classification_cols(df: pd.DataFrame, sel_cols: list[str]) -> pd.Data
 
     return df[sel_cols].copy()
 
+
 def destringify_list(string_list: str) -> list[str]:
 
     if pd.isna(string_list):
         return []
 
-    try:
-        list_res = [
+    return [
             item.strip("'\"") for item in string_list.strip("[]").split(", ")
         ]
 
-        if isinstance(list_res, list):
-            return list_res
-    except (ValueError, SyntaxError):
-        pass
-
-    return []
 
 df = load_csv("../data/listings.csv")
 df = process_dataframe(df)
 df = select_classification_cols(df, CLASSIFICATION_COLUMNS)
 df.info()
-df[]
 
 TEXT_COLUMNS = [
     "pageTitle",
