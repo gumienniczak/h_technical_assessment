@@ -37,25 +37,112 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     return df.dropna(axis = 1, how = "all")
 
+CLASSIFICATION_COLUMNS = [
+    "summary",
+    "propertySubType",
+    "description",
+    "detailedDescription",
+    "shareDescription",
+    "keyFeatures",
+    "pageTitle",
+    "sizeFt",
+    "sizeAc",
+    "commercial",
+    "residential",
+]
+
+SUPPORTING_COLUMNS = [
+    "price",
+    "pricePerUnit",
+    "tenureType",
+    "tenure",
+    "tenureFull",
+    "floorAreaUnits",
+    "currency",
+    "currencyCode",
+    "priceFrequency",
+    "status",
+    "infoReelItems",
+    "nearestStations",
+    "pointsOfInterest",
+    "name",
+]
+
+METADATA_COLUMNS = [
+    "id",
+    "displayAddress",
+    "address",
+    "postalCode",
+    "Region",
+    "region",
+    "latitude",
+    "longitude",
+    "firstVisibleDate",
+    "listingUpdateDate",
+    "updateDate",
+    "listingUpdateReason",
+    "numberOfImages",
+    "agentCompanyAddress",
+    "agentCompanyName",
+    "agentCompanyPhone",
+    "agentCompanyPostcode",
+    "listingHistory",
+    "analyticsTaxonomy",
+]
+
+def select_classification_cols(df: pd.DataFrame, sel_cols: list[str]) -> pd.DataFrame:
+
+    missing_cols = [col for col in sel_cols if col not in df.columns]
+
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {missing_cols}")
+
+    return df[sel_cols].copy()
+
+# def destringify_list(string_list: str) -> list[str]:
+
+#     return []
+
 df = load_csv("../data/listings.csv")
 df = process_dataframe(df)
+df = select_classification_cols(df, CLASSIFICATION_COLUMNS)
 df.info()
 
-print(df.columns.tolist())
+TEXT_COLUMNS = [
+    "pageTitle",
+    "summary",
+    "description",
+    "detailedDescription",
+    "shareDescription",
+]
 
-print(df[
-    [
-        "summary",
-        "description",
-        "detailedDescription",
-        "keyFeatures",
-        "propertySubType"
-    ]
-].head(3))
+for col in TEXT_COLUMNS:
+    print(f"\n--- {col} ---")
+    print(df.iloc[2][col])
 
-print(df.iloc[0].summary)
-print(df.iloc[0].description)
-print(df.iloc[0].detailedDescription)
-print(df.iloc[0].keyFeatures)
-print(df.iloc[0].propertySubType)
-print(df.iloc[0].infoReelItems)
+# print(df.columns.tolist())
+
+# print(df[
+#     [
+#         "summary",
+#         "description",
+#         "detailedDescription",
+#         "keyFeatures",
+#         "propertySubType"
+#     ]
+# ].head(3))
+
+# print(df.iloc[0].summary)
+# print(df.iloc[0].description)
+# print(df.iloc[0].detailedDescription)
+# print(df.iloc[0].keyFeatures)
+# print(df.iloc[0].propertySubType)
+# print(df.iloc[0].infoReelItems)
+# print(df.iloc[0].analyticsTaxonomy)
+
+# print(df.iloc[0])
+
+# print(df["analyticsTaxonomy"].iloc[5])
+# print(df["propertySubType"].head())
+# print(df["commercial"].value_counts(dropna=False))
+# print(df["residential"].value_counts(dropna=False))
