@@ -1,4 +1,3 @@
-import csv
 import pandas as pd
 
 
@@ -50,6 +49,16 @@ CLASSIFICATION_COLUMNS = [
     "commercial",
     "residential",
 ]
+
+FIELD_LABELS = {
+    "propertySubType": "Property Sub Type",
+    "sizeFt": "Size (sq ft)",
+    "sizeAc": "Size (acres)",
+    "summary": "Summary",
+    "description": "Description",
+    "detailedDescription": "Detailed Description",
+    "shareDescription": "Share Description",
+}
 
 SUPPORTING_COLUMNS = [
     "price",
@@ -105,12 +114,15 @@ def destringify_list(string_list: str) -> list[str]:
     if pd.isna(string_list):
         return []
 
-    return [
-            item.strip("'\"") for item in string_list.strip("[]").split(", ")
-        ]
+    cleaned = string_list.strip("[]").strip()
 
-def construct_feature_description():
-    pass
+    if not cleaned:
+        return []
+
+    return [
+        item.strip("'\"")
+        for item in cleaned.split(", ")
+    ]
 
 STRUCTURED_ORDER = [
     "pageTitle",
@@ -173,18 +185,63 @@ def build_text_section(listing: pd.Series) -> str:
 
     return "\n\n".join(description_parts)
 
-# for col in TEXT_COLUMNS:
-#     print(f"\n--- {col} ---")
-#     print(df.iloc[2][col])
+def build_structured_section(listing: pd.Series) -> str:
 
-print(df.columns.tolist())
+    structured_parts = []
+
+    for col_name in STRUCTURED_ORDER:
+
+        value = listing[col_name]
+
+        if pd.isna(value):
+            continue
+
+        value = str(value).strip()
+
+        if not value:
+            continue
+
+        structured_parts.append(
+            f"{col_name}\n{value}"
+        )
+
+    return "\n\n".join(structured_parts)
+
+def build_listing_context(listing: pd.Series) -> str:
+
+    sections = []
+
+    structured = build_structured_section(listing)
+
+    if structured:
+        sections.append(structured)
+
+    features = build_features_section(listing)
+
+    if features:
+        sections.append(features)
+
+    text = build_text_section(listing)
+
+    if text:
+        sections.append(text)
+
+    return "\n\n".join(sections)
+
+
 
 df = load_csv("../data/listings.csv")
+# print(df.columns.tolist())
 df = process_dataframe(df)
 df = select_classification_cols(df, CLASSIFICATION_COLUMNS)
 df["destringifiedFeatures"] = df["keyFeatures"].apply(destringify_list)
-df.info()
-df.iloc[0]["destringifiedFeatures"]
+
+print(
+    build_listing_context(df.iloc[0])
+)
+
+# df.info()
+# df.iloc[0]["destringifiedFeatures"]
 
 # print(df[
 #     [
@@ -204,7 +261,7 @@ df.iloc[0]["destringifiedFeatures"]
 # print(df.iloc[0].infoReelItems)
 # print(df.iloc[0].analyticsTaxonomy)
 
-print(df.iloc[1].residential)
+# print(df.iloc[1].residential)
 
 # print(df.iloc[0])
 
