@@ -5,17 +5,45 @@ from ollama import Client
 
 load_dotenv()
 
-client = Client(
-    host="https://ollama.com",
-    headers={'Authorization': 'Bearer ' + os.environ.get('OLLAMA_API_KEY')}
+MODEL_NAME = os.getenv(
+    "MODEL_NAME",
+    "gemma4:12b"
 )
 
-messages = [
-  {
-    'role': 'user',
-    'content': 'Why is the sky blue?',
-  },
-]
+OLLAMA_HOST = os.getenv(
+    "OLLAMA_HOST",
+    "http://localhost:11434"
+)
 
-for part in client.chat('gpt-oss:120b', messages=messages, stream=True):
-  print(part['message']['content'], end='', flush=True)
+client = Client(
+    host=OLLAMA_HOST
+)
+
+
+def query_model(prompt: str) -> str:
+    """Send a prompt to the configured Ollama model."""
+
+    response = client.chat(
+        model=MODEL_NAME,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    )
+
+    return response["message"]["content"]
+
+
+def main():
+
+    response = query_model(
+        "Why is the sky blue?"
+    )
+
+    print(response)
+
+
+if __name__ == "__main__":
+    main()
