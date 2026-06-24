@@ -196,14 +196,15 @@ def classify_listing(
 
     listing_context = build_listing_context(listing)
 
-    candidate_categories = determine_candidate_categories(
-        listing
-    )
+    candidate_categories, size_filter_applied = (
+        determine_candidate_categories(listing)
+        )
 
     prompt = build_classification_prompt(
-        listing_context,
-        candidate_categories,
-    )
+    listing_context,
+    candidate_categories,
+    size_filter_applied,
+)
 
     return query_model(
         prompt=prompt,

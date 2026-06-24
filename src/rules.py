@@ -19,7 +19,7 @@ CATEGORY_RULES = {
 
 def determine_candidate_categories(
     listing: pd.Series,
-) -> list[str]:
+) -> tuple[list[str], bool]:
     
     """
     Determine which acquisition categories remain feasible after applying
@@ -32,7 +32,7 @@ def determine_candidate_categories(
     size_ac = listing["sizeAc"]
 
     if pd.isna(size_ft) and pd.isna(size_ac):
-        return list(CATEGORY_RULES.keys())
+        return list(CATEGORY_RULES.keys()), False
     
     candidates = []
 
@@ -65,4 +65,4 @@ def determine_candidate_categories(
             ):
                 candidates.append(category)
 
-    return candidates
+    return candidates, True

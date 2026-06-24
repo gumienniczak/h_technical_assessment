@@ -126,7 +126,9 @@ Instructions
 def build_classification_prompt(
     listing_context: str,
     candidate_categories: list[str],
+    size_filter_applied: bool,
 ) -> str:
+    
     """Build the user prompt for classifying a property listing."""
 
     category_guidance = "\n\n".join(
@@ -139,6 +141,20 @@ def build_classification_prompt(
         for category in candidate_categories
     )
 
+    if size_filter_applied:
+        size_message = """
+Mandatory size requirements have already been applied.
+
+Do not infer or reconsider additional size constraints.
+"""
+    else:
+        size_message = """
+No structured size information was available.
+
+If the property listing contains size information in the description or
+key features, you may use it when assessing the candidate categories.
+"""
+
     return f"""
 {category_guidance}
 
@@ -149,7 +165,7 @@ def build_classification_prompt(
 Candidate Categories
 ====================
 
-Mandatory size requirements have already been applied.
+{size_message}
 
 Only classify the property as one of the following candidate categories:
 
