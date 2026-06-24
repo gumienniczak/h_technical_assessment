@@ -11,8 +11,8 @@ CLASSIFICATION_COLUMNS = [
     "pageTitle",
     "sizeFt",
     "sizeAc",
-    "commercial",c
-    "residential",
+    "commercial",
+    "residential"
 ]
 
 FIELD_LABELS = {
