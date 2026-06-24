@@ -1,10 +1,17 @@
 import json
 import os
 
-from dataclasses import dataclass
+import pandas as pd
 
 from dotenv import load_dotenv
 from ollama import Client
+
+from data_preprocessing import build_listing_context
+from prompts import (
+    SYSTEM_PROMPT,
+    build_classification_prompt,
+)
+from rules import determine_candidate_categories
 
 
 load_dotenv()
@@ -27,22 +34,21 @@ VALID_CATEGORIES = {
     "None",
 }
 
+VALID_CONFIDENCE = {
+    "High",
+    "Medium",
+    "Low",
+}
+
 
 client = Client(host=OLLAMA_HOST)
-
-
-@dataclass
-class ClassificationResult:
-    category: str
-    confidence: int
-    reasoning: str
 
 
 def query_model(
     prompt: str,
     system_prompt: str | None = None,
     think: bool = False,
-) -> ClassificationResult:
+) -> dict:
     """Query the configured Ollama model."""
 
     messages = []
@@ -76,7 +82,7 @@ def query_model(
 
 def parse_response(
     response: str,
-) -> ClassificationResult:
+) -> dict:
     """Parse, recover and validate model output."""
 
     try:
@@ -89,11 +95,7 @@ def parse_response(
 
     validate_response(result)
 
-    return ClassificationResult(
-        category=result["category"],
-        confidence=result["confidence"],
-        reasoning=result["reasoning"],
-    )
+    return result
 
 
 def extract_json(
@@ -170,17 +172,9 @@ def validate_response(
             f"Invalid category: {result['category']}"
         )
 
-    if not isinstance(
-        result["confidence"],
-        int,
-    ):
+    if result["confidence"] not in VALID_CONFIDENCE:
         raise ValueError(
-            "Confidence must be an integer."
-        )
-
-    if not 0 <= result["confidence"] <= 100:
-        raise ValueError(
-            "Confidence must be between 0 and 100."
+            f"Invalid confidence level: {result['confidence']}"
         )
 
     if not isinstance(
@@ -192,15 +186,25 @@ def validate_response(
         )
 
 
-def main():
+def classify_listing(
+    listing: pd.Series,
+    think: bool = False,
+) -> dict:
+    """Classify a single property listing."""
 
-    result = query_model(
-        prompt="Say hello as JSON.",
-        think=False,
+    listing_context = build_listing_context(listing)
+
+    candidate_categories = determine_candidate_categories(
+        listing
     )
 
-    print(result)
+    prompt = build_classification_prompt(
+        listing_context,
+        candidate_categories,
+    )
 
-
-if __name__ == "__main__":
-    main()
+    return query_model(
+        prompt=prompt,
+        system_prompt=SYSTEM_PROMPT,
+        think=think,
+    )
