@@ -1,11 +1,13 @@
 SYSTEM_PROMPT = """
 You are an expert commercial property acquisition classifier.
 
-Your task is to classify commercial property listings into exactly one acquisition category.
+Your task is to classify commercial property listings into exactly one
+acquisition category.
 
 Do not use information outside of the listing or invent new information.
 
-If there is insufficient evidence to support any category, classify the property as "None".
+If there is insufficient evidence to support any category, classify the
+property as "None".
 
 Return only valid JSON.
 """
@@ -15,18 +17,16 @@ Return ONLY valid JSON.
 
 {
     "category": "Nursery | SEN School | Food Store | None",
-    "confidence": 0,
+    "confidence": "High | Medium | Low",
     "reasoning": ""
 }
 """
 
-CATEGORY_GUIDANCE = """
-Classification Categories
-=========================
-
+CATEGORY_GUIDANCE = {
+    "Nursery": """
 Nursery
 
-Suitable property types include:
+Typical suitable property types include:
 - Office buildings
 - Schools
 - Places of worship
@@ -39,12 +39,12 @@ Suitable property types include:
 Additional desirable characteristics:
 - Parking
 - Outdoor space
+""",
 
-------------------------------------------------------------
-
+    "SEN School": """
 SEN School
 
-Suitable property types include:
+Typical suitable property types include:
 - Office buildings
 - Schools
 - Places of worship
@@ -58,52 +58,74 @@ Additional desirable characteristics:
 - Parking
 - Outdoor space
 - Self-contained sites
+""",
 
-------------------------------------------------------------
-
+    "Food Store": """
 Food Store
 
-Suitable property types include:
+Typical suitable property types include:
 - Existing retail units
 - Local centres
 - Public houses
 - Car showrooms
 - MOT centres
 - Shopping parades
+""",
+}
 
-------------------------------------------------------------
+CONFIDENCE_GUIDANCE = """
+Confidence Levels
+=================
 
-None
+High
+- The remaining candidate category is strongly supported by the listing's
+  property type, key features and descriptions.
+- There are no significant conflicting signals.
 
-Select "None" if the listing does not provide sufficient evidence
-for any candidate category.
+Medium
+- The listing contains good supporting evidence for one candidate category,
+  but some information is missing or ambiguous.
+
+Low
+- The classification is based on weak or limited evidence.
+- The listing lacks sufficient detail, or multiple interpretations are plausible.
 """
 
 CLASSIFICATION_RULES = """
 Instructions
 ============
 
-1. Mandatory size constraints have already been applied.
+1. Mandatory size requirements have already been applied.
 
 2. Only consider the candidate categories provided below.
 
-3. Compare the property against the suitable property types and desirable
-   characteristics for each candidate category.
+3. Use the property type, key features and listing description to determine
+   which candidate category is the best match.
 
 4. Base your decision only on the information contained in the listing.
 
 5. Choose exactly one category.
 
-6. If there is insufficient evidence for any candidate category,
-   return "None".
+6. If none of the candidate categories are sufficiently supported by the
+   listing, return "None".
 
-7. Provide a concise reasoning for your decision.
+7. If the listing contains conflicting evidence, base your classification
+   on the strongest overall evidence.
+
+8. Provide a concise reasoning for your decision.
 """
+
 
 def build_classification_prompt(
     listing_context: str,
     candidate_categories: list[str],
 ) -> str:
+    """Build the user prompt for classifying a property listing."""
+
+    category_guidance = "\n\n".join(
+        CATEGORY_GUIDANCE[category]
+        for category in candidate_categories
+    )
 
     candidate_list = "\n".join(
         f"- {category}"
@@ -111,17 +133,23 @@ def build_classification_prompt(
     )
 
     return f"""
-{CATEGORY_GUIDANCE}
+{category_guidance}
+
+{CONFIDENCE_GUIDANCE}
 
 {CLASSIFICATION_RULES}
 
 Candidate Categories
 ====================
 
-The following categories remain possible after applying the mandatory
-size requirements:
+Mandatory size requirements have already been applied.
+
+Only classify the property as one of the following candidate categories:
 
 {candidate_list}
+
+If none of the candidate categories are sufficiently supported by the
+listing, return "None".
 
 Property Listing Context
 ========================
