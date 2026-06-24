@@ -9,6 +9,7 @@ from ollama import Client
 
 load_dotenv()
 
+
 MODEL_NAME = os.getenv(
     "MODEL_NAME",
     "gemma4:12b",
