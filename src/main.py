@@ -112,21 +112,16 @@ def destringify_list(string_list: str) -> list[str]:
 def construct_feature_description():
     pass
 
-df = load_csv("../data/listings.csv")
-df = process_dataframe(df)
-df = select_classification_cols(df, CLASSIFICATION_COLUMNS)
-df["destringifiedFeatures"] = df["keyFeatures"].apply(destringify_list)
-df.info()
-df.iloc[0]["destringifiedFeatures"]
-
 STRUCTURED_ORDER = [
     "pageTitle",
     "propertySubType",
     "sizeFt",
     "sizeAc",
+]
+
+SUPPORTING_SIGNALS = [
     "commercial",
-    "residential",
-    "destringifiedFeatures",
+    "residential"
 ]
 
 TEXT_ORDER = [
@@ -136,7 +131,27 @@ TEXT_ORDER = [
     "shareDescription",
 ]
 
-def build_listing_context(listing: pd.Series) -> str:
+FEATURES_ORDER = [
+    "destringifiedFeatures"
+]
+
+
+def build_features_section(listing: pd.Series) -> str:
+
+    features = listing["destringifiedFeatures"]
+
+    if not features:
+        return ""
+
+    return (
+        "Key Features:\n"
+        + "\n".join(
+            f"- {feature}"
+            for feature in features
+        )
+    )
+
+def build_text_section(listing: pd.Series) -> str:
 
     description_parts = []
 
@@ -164,6 +179,13 @@ def build_listing_context(listing: pd.Series) -> str:
 
 print(df.columns.tolist())
 
+df = load_csv("../data/listings.csv")
+df = process_dataframe(df)
+df = select_classification_cols(df, CLASSIFICATION_COLUMNS)
+df["destringifiedFeatures"] = df["keyFeatures"].apply(destringify_list)
+df.info()
+df.iloc[0]["destringifiedFeatures"]
+
 # print(df[
 #     [
 #         "summary",
@@ -181,6 +203,8 @@ print(df.columns.tolist())
 # print(df.iloc[0].propertySubType)
 # print(df.iloc[0].infoReelItems)
 # print(df.iloc[0].analyticsTaxonomy)
+
+print(df.iloc[1].residential)
 
 # print(df.iloc[0])
 
