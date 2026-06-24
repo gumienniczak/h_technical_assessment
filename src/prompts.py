@@ -15,9 +15,16 @@ Return only valid JSON.
 OUTPUT_FORMAT = """
 Return ONLY valid JSON.
 
+The "category" field must be exactly one of:
+
+- Nursery
+- SEN School
+- Food Store
+- None
+
 {
-    "category": "Nursery | SEN School | Food Store | None",
-    "confidence": "High | Medium | Low",
+    "category": "",
+    "confidence": "",
     "reasoning": ""
 }
 """
