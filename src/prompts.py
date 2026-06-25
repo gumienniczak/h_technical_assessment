@@ -1,19 +1,20 @@
 SYSTEM_PROMPT = """
 You are an expert commercial property acquisition classifier.
 
-Your task is to determine which acquisition category a commercial
+Your task is to determine which Harkalm acquisition category a commercial
 property is most suitable for.
 
-Consider both the property's current use and its potential for conversion,
-provided there is sufficient evidence within the listing.
+Harkalm acquires existing commercial properties for future conversion.
+Assess the property's suitability for acquisition, not simply its current
+use.
 
-Do not use information outside of the listing or invent new information.
+Base every decision only on the information contained within the listing.
 
-If there is insufficient evidence to support any category, classify the
-property as "None".
+Do not invent missing information or assumptions.
 
 Return only valid JSON.
 """
+
 
 OUTPUT_FORMAT = """
 Return ONLY valid JSON.
@@ -27,16 +28,19 @@ The "category" field must be exactly one of:
 
 {
     "category": "",
-    "confidence": "",
+    "confidence": "High | Medium | Low",
     "reasoning": ""
 }
 """
 
+
 CATEGORY_GUIDANCE = {
+
     "Nursery": """
 Nursery
 
-Typical suitable property types include:
+Primary acquisition opportunities:
+
 - Office buildings
 - Schools
 - Places of worship
@@ -46,15 +50,23 @@ Typical suitable property types include:
 - Development land
 - New-build commercial properties
 
-Additional desirable characteristics:
-- Parking
-- Outdoor space
+The property does NOT need to currently operate as a nursery.
+
+Positive evidence includes:
+
+- the property type matches one of the acquisition opportunities;
+- references to alternative uses or conversion;
+- community or healthcare use;
+- layouts suitable for childcare;
+- parking;
+- outdoor space.
 """,
 
     "SEN School": """
 SEN School
 
-Typical suitable property types include:
+Primary acquisition opportunities:
+
 - Office buildings
 - Schools
 - Places of worship
@@ -64,42 +76,61 @@ Typical suitable property types include:
 - Development land
 - New-build commercial properties
 
-Additional desirable characteristics:
-- Parking
-- Outdoor space
-- Self-contained sites
+The property does NOT need to currently operate as a SEN school.
+
+Positive evidence includes:
+
+- the property type matches one of the acquisition opportunities;
+- references to alternative uses or conversion;
+- community or educational use;
+- self-contained sites;
+- parking;
+- outdoor space.
 """,
 
     "Food Store": """
 Food Store
 
-Typical suitable property types include:
+Primary acquisition opportunities:
+
 - Existing retail units
 - Local centres
 - Public houses
 - Car showrooms
 - MOT centres
 - Shopping parades
+
+The property does NOT need to currently operate as a food store.
+
+Positive evidence includes:
+
+- retail use;
+- prominent roadside locations;
+- local shopping centres;
+- references to retail conversion or alternative retail use.
 """,
 }
+
 
 CONFIDENCE_GUIDANCE = """
 Confidence Levels
 =================
 
 High
-- The remaining candidate category is strongly supported by the listing's
-  property type, key features and descriptions.
-- There are no significant conflicting signals.
+
+- Strong evidence supports one candidate category.
+- There are no meaningful conflicting signals.
 
 Medium
-- The listing contains good supporting evidence for one candidate category,
-  but some information is missing or ambiguous.
+
+- Good evidence exists, but some information is incomplete or ambiguous.
 
 Low
-- The classification is based on weak or limited evidence.
-- The listing lacks sufficient detail, or multiple interpretations are plausible.
+
+- The decision relies on limited evidence.
+- Multiple interpretations remain plausible.
 """
+
 
 CLASSIFICATION_RULES = """
 Instructions
@@ -109,24 +140,44 @@ Instructions
 
 2. Only consider the candidate categories provided below.
 
-3. Assess whether the property would be suitable for acquisition as one of the
-candidate categories, taking into account both its current use and its
-potential for conversion based on the information provided.
+3. Harkalm acquires commercial properties for future conversion.
 
-4. Consider the property's suitability for future use, not only its current use.
-Do not require the property to already operate as the target category.
+4. Do NOT classify the property solely according to its current use.
 
-5. Base your decision only on the information contained in the listing.
+5. Evaluate each candidate category independently.
 
-6. Choose exactly one category.
+For each category:
 
-7. If none of the candidate categories are sufficiently supported by the
-   listing, return "None".
+a) Determine whether the property's current type or previous use matches
+one of the listed acquisition opportunities.
 
-8. If the listing contains conflicting evidence, base your classification
-   on the strongest overall evidence.
+b) Identify evidence supporting conversion into that category.
 
-9. Provide a concise reasoning for your decision.
+Treat phrases such as:
+
+- suitable for alternative uses
+- redevelopment opportunity
+- community use
+- healthcare use
+- educational use
+
+as positive evidence where they align with the acquisition criteria.
+
+c) Identify desirable characteristics.
+
+d) Compare all candidate categories and select the one supported by the
+strongest overall evidence.
+
+6. Base every decision only on evidence contained within the listing.
+
+7. Do not invent evidence that is not present.
+
+8. Only return "None" if none of the candidate categories are sufficiently
+supported by the listing.
+
+9. Choose exactly one category.
+
+10. Keep the reasoning concise and refer only to evidence from the listing.
 """
 
 
@@ -135,8 +186,7 @@ def build_classification_prompt(
     candidate_categories: list[str],
     size_filter_applied: bool,
 ) -> str:
-    
-    """Build the user prompt for classifying a property listing."""
+    """Build the prompt for classifying a property listing."""
 
     category_guidance = "\n\n".join(
         CATEGORY_GUIDANCE[category]
@@ -152,14 +202,14 @@ def build_classification_prompt(
         size_message = """
 Mandatory size requirements have already been applied.
 
-Do not infer or reconsider additional size constraints.
+Do not infer additional size constraints.
 """
     else:
         size_message = """
 No structured size information was available.
 
-If the property listing contains size information in the description or
-key features, you may use it when assessing the candidate categories.
+If the listing contains size information within the description or key
+features, you may use it when evaluating the candidate categories.
 """
 
     return f"""
@@ -178,11 +228,42 @@ Only classify the property as one of the following candidate categories:
 
 {candidate_list}
 
-If none of the candidate categories are sufficiently supported by the
-listing, return "None".
+Evaluation Process
+==================
 
-Property Listing Context
-========================
+Evaluate every candidate category using the following sequence.
+
+Step 1
+Determine whether the property's current type or previous use matches one
+of the listed acquisition opportunities.
+
+Step 2
+Identify evidence supporting future conversion into that category.
+
+Treat references to:
+
+- alternative uses;
+- conversion;
+- redevelopment;
+- community use;
+- healthcare use;
+- educational use;
+
+as positive evidence where appropriate.
+
+Step 3
+Identify desirable characteristics that strengthen the case.
+
+Step 4
+Compare all candidate categories.
+
+Choose the category supported by the strongest overall evidence.
+
+Only return "None" if none of the candidate categories are sufficiently
+supported.
+
+Property Listing
+================
 
 {listing_context}
 
