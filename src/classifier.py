@@ -154,8 +154,6 @@ def validate_response(
 ) -> None:
     """Validate the model response."""
 
-    print(result)
-
     required_fields = {
         "category",
         "confidence",
