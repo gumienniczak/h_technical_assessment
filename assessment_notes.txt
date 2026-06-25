@@ -1,0 +1,21 @@
+# Assessment Notes
+
+## Assumptions
+
+I assumed that the acquisition brochure represented the authoritative business requirements. Mandatory criteria, such as property size, were therefore implemented deterministically in Python before invoking the language model.
+
+I also assumed that the input dataset would contain the minimum set of columns required for classification. Rather than attempting to infer missing information, the preprocessing stage validates that these fields are present and raises an error if mandatory columns are missing.
+
+Handling Ambiguous Listings
+
+Commercial property listings frequently describe buildings as being suitable for a variety of alternative uses without identifying a single target use. My aim was to keep the classifier conservative, encouraging the model to remain grounded in the evidence contained within the listing rather than forcing a positive classification. Where no candidate category was sufficiently supported, the model returned None.
+
+During development, I iteratively refined the prompt to encourage the model to assess a property's suitability for acquisition and future conversion rather than simply identifying its current use. While this improved several ambiguous cases, some listings remain challenging. For example, former medical premises may still be classified conservatively despite appearing in Harkalm's acquisition criteria as suitable opportunities for future conversion. Given more time, I would continue refining the reasoning process so that the model more consistently evaluates acquisition potential alongside the property's current characteristics.
+
+## Future Improvements
+
+Given more time, I would introduce automated tests (for example using `pytest`) for the preprocessing, business rules and response validation components.
+
+I would also evaluate the classifier against a labelled validation dataset to measure prompt performance objectively and continue refining the reasoning process so that the model more consistently evaluates a property's current type against Harkalm's acquisition opportunities before considering its suitability for conversion.
+
+Finally, I would investigate using a secondary LLM-assisted step to extract deterministic business rules from future acquisition documents automatically, reducing the amount of manual rule definition required.
