@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import pandas as pd
@@ -13,6 +14,7 @@ from prompts import (
 )
 from rules import determine_candidate_categories
 
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -26,6 +28,16 @@ OLLAMA_HOST = os.getenv(
     "OLLAMA_HOST",
     "http://localhost:11434",
 )
+
+# Retries apply only to unusable model output (invalid JSON / schema).
+# Connection errors are not retried: if Ollama is down, fail fast.
+MAX_ATTEMPTS = int(os.getenv("MAX_ATTEMPTS", "3"))
+
+# Deterministic decoding so repeated runs give comparable results.
+MODEL_OPTIONS = {
+    "temperature": 0,
+    "seed": 42,
+}
 
 VALID_CATEGORIES = {
     "Nursery",
@@ -48,6 +60,7 @@ def query_model(
     prompt: str,
     system_prompt: str | None = None,
     think: bool = False,
+    candidates: list[str] | None = None
 ) -> dict:
     """Query the configured Ollama model."""
 
@@ -73,6 +86,7 @@ def query_model(
         messages=messages,
         think=think,
         format="json",
+        options=MODEL_OPTIONS
     )
 
     return parse_response(
@@ -82,6 +96,7 @@ def query_model(
 
 def parse_response(
     response: str,
+    candidates: list[str] | None = None,
 ) -> dict:
     """Parse, recover and validate model output."""
 
@@ -93,7 +108,7 @@ def parse_response(
             extract_json(response)
         )
 
-    validate_response(result)
+    validate_response(result, candidates)
 
     return result
 
@@ -144,6 +159,21 @@ def extract_json(
 
         start = text.find("{", start + 1)
 
+    cur_obj_boundary = 0
+
+    decoder = json.JSONDecoder()
+
+    final_obj = None
+
+    while cur_obj_boundary < len(text):
+        obj, obj_bnd = decoder.raw_decode(text[start:], idx=cur_obj_boundary)
+
+        if validate_response(obj):
+            final_obj = obj
+            break
+        else:
+            cur_obj_boundary = obj_bnd
+    
     raise ValueError(
         "Could not recover a valid JSON object."
     )
@@ -151,8 +181,13 @@ def extract_json(
 
 def validate_response(
     result: dict,
-) -> None:
-    """Validate the model response."""
+    candidates: list[str] | None = None,
+) -> bool | None:
+    """Validate the model response.
+
+        When ``candidates`` is given, the category must be one of them (or
+        "None"), so the deterministic rules cannot be overridden by the model.
+    """
 
     required_fields = {
         "category",
@@ -172,6 +207,16 @@ def validate_response(
             f"Invalid category: {result['category']}"
         )
 
+    if (
+        candidates is not None
+        and result["category"] != "None"
+        and result["category"] not in candidates
+    ):
+        raise ValueError(
+            f"Category {result['category']!r} is not one of the "
+            f"candidate categories: {candidates}"
+        )
+
     if result["confidence"] not in VALID_CONFIDENCE:
         raise ValueError(
             f"Invalid confidence level: {result['confidence']}"
@@ -185,27 +230,84 @@ def validate_response(
             "Reasoning must be a string."
         )
 
+    return True
+
+
+def describe_size(listing: pd.Series) -> str:
+    """Human-readable size summary used in rule-based reasoning."""
+
+    parts = []
+
+    if not pd.isna(listing["sizeFt"]):
+        parts.append(f"{listing['sizeFt']:,.0f} sq ft")
+
+    if not pd.isna(listing["sizeAc"]):
+        parts.append(f"{listing['sizeAc']:g} acres")
+
+    return ", ".join(parts)
 
 def classify_listing(
     listing: pd.Series,
     think: bool = False,
 ) -> dict:
-    """Classify a single property listing."""
+    """Classify a single property listing.
+    
+    Returns a dict with ``category``, ``confidence`` and ``reasoning``.
+    """
 
-    listing_context = build_listing_context(listing)
+    
 
     candidate_categories, size_filter_applied = (
         determine_candidate_categories(listing)
         )
 
+    # The size rules already exclude every category, so the model is not
+        # asked (it could only contradict the rules).
+    if not candidate_categories:
+        return {
+            "category": "None",
+            "confidence": "High",
+            "reasoning": (
+                "Excluded by size rules: the listed size "
+                f"({describe_size(listing)}) does not meet the "
+                "requirements of any category."
+                ),
+            }
+
+    listing_context = build_listing_context(listing)
+
     prompt = build_classification_prompt(
     listing_context,
     candidate_categories,
     size_filter_applied,
-)
-
-    return query_model(
-        prompt=prompt,
-        system_prompt=SYSTEM_PROMPT,
-        think=think,
     )
+
+    last_error: Exception | None = None
+    
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return query_model(
+                prompt=prompt,
+                system_prompt=SYSTEM_PROMPT,
+                think=think,
+                candidates=candidate_categories,
+            )
+    
+        except ValueError as error:
+            # json.JSONDecodeError is a ValueError subclass
+            last_error = error
+            logger.warning(
+                "Attempt %d/%d failed: %s",
+                attempt,
+                MAX_ATTEMPTS,
+                error,
+            )
+    
+    return {
+        "category": "None",
+        "confidence": "Low",
+        "reasoning": (
+            f"ERROR: no valid model response after {MAX_ATTEMPTS} "
+            f"attempts ({last_error})."
+            ),
+        }
