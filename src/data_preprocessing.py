@@ -1,3 +1,4 @@
+import ast
 import pandas as pd
 
 
@@ -101,21 +102,34 @@ def select_classification_cols(
     return df[selected_cols].copy()
 
 
-def destringify_list(value: str) -> list[str]:
+def destringify_list(value: str | float | None) -> list[str]:
     """Convert a stringified list into a Python list."""
 
     if pd.isna(value):
         return []
 
-    cleaned = value.strip("[]").strip()
+    text = str(value).strip()
+
+    if not text:
+        return []
+
+    try:
+        parsed = ast.literal_eval(text)
+    except (ValueError, SyntaxError):
+        parsed = None
+
+    if isinstance(parsed, (list, tuple)):
+        items = [str(item).strip() for item in parsed]
+        return [item for item in items if item]
+
+    cleaned = text.strip("[]").strip()
 
     if not cleaned:
         return []
+    
+    items = [item.strip(" '\"") for item in cleaned.split(", ")]
 
-    return [
-        item.strip("'\"")
-        for item in cleaned.split(", ")
-    ]
+    return [item for item in items if item]
 
 
 def clean_value(value) -> str | None:
