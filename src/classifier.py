@@ -99,85 +99,46 @@ def parse_response(
     response: str,
     candidates: list[str] | None = None,
 ) -> dict:
-    """Parse, recover and validate model output."""
+    """Return the last top-level JSON object in the reply that passes validation."""
+    valid = []
+    last_error = "no JSON object found"
 
-    try:
-        result = json.loads(response)
+    for obj in extract_json_objects(response):
+        try:
+            validate_response(obj, candidates)
+        except ValueError as error:
+            last_error = str(error)
+            continue
+        valid.append(obj)
 
-    except json.JSONDecodeError:
-        result = json.loads(
-            extract_json(response)
+    if not valid:
+        raise ValueError(f"No valid response object: {last_error}")
+
+    if len(valid) > 1:
+        logger.warning(
+            "Model returned %d valid objects; using the last one.", len(valid)
         )
 
-    validate_response(result, candidates)
-
-    return result
+    return valid[-1]
 
 
-def extract_json(
-    text: str,
-) -> str:
-    """
-    Recover the largest JSON object from a model response.
-    Handles Markdown code fences and surrounding text.
-    """
-
-    text = text.strip()
-
-    if text.startswith("```json"):
-        text = text[7:]
-
-    if text.endswith("```"):
-        text = text[:-3]
-
-    text = text.strip()
-
-    start = text.find("{")
-
-    if start == -1:
-        raise ValueError(
-            "No JSON object found."
-        )
-
-    while start != -1:
-
-        candidate = text[start:]
-
-        while candidate:
-
-            try:
-                json.loads(candidate)
-                return candidate
-
-            except json.JSONDecodeError:
-
-                end = candidate.rfind("}")
-
-                if end == -1:
-                    break
-
-                candidate = candidate[:end]
-
-        start = text.find("{", start + 1)
-
-    cur_obj_boundary = 0
-
+def extract_json_objects(text: str) -> list[dict]:
+    """Return every top-level JSON object in the text, in order of appearance."""
     decoder = json.JSONDecoder()
+    objects = []
+    position = text.find("{")
 
-    final_obj = None
+    while position != -1:
+        try:
+            obj, length = decoder.raw_decode(text[position:])
+        except json.JSONDecodeError:
+            position = text.find("{", position + 1)   # not JSON, try the next "{"
+            continue
 
-    while cur_obj_boundary < len(text):
-        obj, obj_bnd = decoder.raw_decode(text[start:], idx=cur_obj_boundary)
+        objects.append(obj)
+        position = text.find("{", position + length)  # jump past it, skip nested objects
 
-        if validate_response(obj):
-            final_obj = obj
-            break
-        else:
-            cur_obj_boundary = obj_bnd
-    
-    raise ValueError(
-        "Could not recover a valid JSON object."
-    )
+    return objects
 
 
 def validate_response(
