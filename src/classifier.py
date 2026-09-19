@@ -221,7 +221,7 @@ def classify_listing(
 
     candidate_categories, size_filter_applied = (
         determine_candidate_categories(listing)
-        )
+    )
 
     # The size rules already exclude every category, so the model is not
         # asked (it could only contradict the rules).
