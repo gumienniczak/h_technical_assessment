@@ -90,7 +90,8 @@ def query_model(
     )
 
     return parse_response(
-        response["message"]["content"]
+        response["message"]["content"],
+        candidates,
     )
 
 
