@@ -136,15 +136,13 @@ CLASSIFICATION_RULES = """
 Instructions
 ============
 
-1. Mandatory size requirements have already been applied.
+1. Only consider the candidate categories provided below.
 
-2. Only consider the candidate categories provided below.
+2. Harkalm acquires commercial properties for future conversion.
 
-3. Harkalm acquires commercial properties for future conversion.
+3. Do NOT classify the property solely according to its current use.
 
-4. Do NOT classify the property solely according to its current use.
-
-5. Evaluate each candidate category independently.
+4. Evaluate each candidate category independently.
 
 For each category:
 
@@ -168,16 +166,16 @@ c) Identify desirable characteristics.
 d) Compare all candidate categories and select the one supported by the
 strongest overall evidence.
 
-6. Base every decision only on evidence contained within the listing.
+5. Base every decision only on evidence contained within the listing.
 
-7. Do not invent evidence that is not present.
+6. Do not invent evidence that is not present.
 
-8. Only return "None" if none of the candidate categories are sufficiently
+7. Only return "None" if none of the candidate categories are sufficiently
 supported by the listing.
 
-9. Choose exactly one category.
+8. Choose exactly one category.
 
-10. Keep the reasoning concise and refer only to evidence from the listing.
+9. Keep the reasoning concise and refer only to evidence from the listing.
 """
 
 
@@ -206,7 +204,8 @@ Do not infer additional size constraints.
 """
     else:
         size_message = """
-No structured size information was available.
+No structured size information was available, so the size requirements
+have NOT been checked for any candidate category.
 
 If the listing contains size information within the description or key
 features, you may use it when evaluating the candidate categories.
