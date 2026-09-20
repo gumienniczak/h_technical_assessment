@@ -1,10 +1,10 @@
 SYSTEM_PROMPT = """
 You are an expert commercial property acquisition classifier.
 
-Your task is to determine which Harkalm acquisition category a commercial
+Your task is to determine which Acme acquisition category a commercial
 property is most suitable for.
 
-Harkalm acquires existing commercial properties for future conversion.
+Acme acquires existing commercial properties for future conversion.
 Assess the property's suitability for acquisition, not simply its current
 use.
 
@@ -138,7 +138,7 @@ Instructions
 
 1. Only consider the candidate categories provided below.
 
-2. Harkalm acquires commercial properties for future conversion.
+2. Acme acquires commercial properties for future conversion.
 
 3. Do NOT classify the property solely according to its current use.
 
