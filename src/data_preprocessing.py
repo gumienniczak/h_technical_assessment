@@ -1,6 +1,10 @@
 import ast
 import pandas as pd
 
+from pathlib import Path
+
+DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "listings.csv"
+
 
 CLASSIFICATION_COLUMNS = [
     "summary",
@@ -62,24 +66,6 @@ def load_csv(filepath: str) -> pd.DataFrame:
         raise RuntimeError(
             f"Failed to load CSV: {e}"
         ) from e
-
-
-def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop columns that contain only null values."""
-
-    empty_cols = df.columns[
-        df.isna().all()
-    ].tolist()
-
-    print(
-        f"Dropping {len(empty_cols)} empty columns:"
-    )
-    print(empty_cols)
-
-    return df.dropna(
-        axis=1,
-        how="all"
-    )
 
 
 def select_classification_cols(
@@ -227,10 +213,8 @@ def build_listing_context(
 def main():
 
     df = load_csv(
-        "../data/listings.csv"
-    )
-
-    df = process_dataframe(df)
+        str(DATA_FILE)
+        )
 
     df = select_classification_cols(
         df,

@@ -8,7 +8,6 @@ from data_preprocessing import (
     CLASSIFICATION_COLUMNS,
     destringify_list,
     load_csv,
-    process_dataframe,
     select_classification_cols,
 )
 
@@ -31,9 +30,8 @@ def main(
     original_df = load_csv(str(input_file))
 
     # Prepare the data required for classification
-    working_df = process_dataframe(original_df)
     working_df = select_classification_cols(
-        working_df,
+        original_df,
         CLASSIFICATION_COLUMNS,
     )
 
